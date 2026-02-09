@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "137235369956",
+    "project_id": "speech-world-003",
+    "storage_bucket": "speech-world-003.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:137235369956:android:a25944de87d141c74f41f1",
+        "android_client_info": {
+          "package_name": "com.zanza.speech_world"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "137235369956-m0ehf5077505qs8ad6reil5vpe2i3ktq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zanza.speech_world",
+            "certificate_hash": "07f2f1b58570df26827958f4ae399ed8e62bc296"
+          }
+        },
+        {
+          "client_id": "137235369956-ehr5ldr7vcf41f5vvgpgfl6bhdb6gpl1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8S7FQMeMbqj10-Z0_9xUoe-7jTcZ63CA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "137235369956-ehr5ldr7vcf41f5vvgpgfl6bhdb6gpl1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "137235369956-12p1v49j58an1hbkeg3j05qo3flvgnf1.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.speechWorld"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

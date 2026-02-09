@@ -1,0 +1,129 @@
+# ============================================
+# USER EXCLUSIONS (Custom)
+# ============================================
+.clinerules/
+.continue/
+.github/
+.firebase/
+.roo/
+.vscode/
+mcp-servers/
+venv/
+
+# ============================================
+# FLUTTER / DART
+# ============================================
+# Build artifacts
+speech_world/build/
+speech_world/.dart_tool/
+speech_world/.flutter-plugins
+speech_world/.flutter-plugins-dependencies
+speech_world/.packages
+speech_world/pubspec.lock
+
+# iOS
+speech_world/ios/Flutter/Flutter.framework
+speech_world/ios/Flutter/Flutter.podspec
+speech_world/ios/.symlinks/
+speech_world/ios/Pods/
+speech_world/ios/Podfile.lock
+
+# Android
+speech_world/android/.gradle/
+speech_world/android/app/debug/
+speech_world/android/app/profile/
+speech_world/android/app/release/
+speech_world/android/key.properties
+speech_world/android/local.properties
+
+# Web
+speech_world/web/.last_build_id
+
+# Linux
+speech_world/linux/flutter/ephemeral/
+
+# macOS
+speech_world/macos/Flutter/ephemeral/
+speech_world/macos/Pods/
+speech_world/macos/Podfile.lock
+
+# Windows
+speech_world/windows/flutter/ephemeral/
+
+# Testing
+speech_world/coverage/
+speech_world/.test_coverage.dart
+
+# IDE
+speech_world/.idea/
+speech_world/*.iml
+speech_world/*.iws
+speech_world/.project
+speech_world/.classpath
+speech_world/.settings/
+
+# Generated files
+speech_world/**/*.g.dart
+speech_world/**/*.freezed.dart
+speech_world/lib/generated_plugin_registrant.dart
+
+# ============================================
+# NODE.JS / BACKEND
+# ============================================
+speech_world_backend/node_modules/
+speech_world_backend/dist/
+speech_world_backend/.env
+speech_world_backend/.env.local
+speech_world_backend/.env.*.local
+speech_world_backend/npm-debug.log*
+speech_world_backend/yarn-debug.log*
+speech_world_backend/yarn-error.log*
+speech_world_backend/pnpm-debug.log*
+speech_world_backend/lerna-debug.log*
+speech_world_backend/*.log
+speech_world_backend/logs/
+speech_world_backend/coverage/
+speech_world_backend/.nyc_output/
+
+# ============================================
+# GENERAL
+# ============================================
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+*.iml
+*.iws
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+.cache/
+node_modules
