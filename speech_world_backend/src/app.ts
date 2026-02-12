@@ -9,6 +9,8 @@ import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
 import { config } from './config/firebase.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './utils/logger.js';
@@ -19,6 +21,12 @@ import userRoutes from './routes/user.routes.js';
 
 // Import middleware
 import { authenticate } from './middleware/auth.js';
+
+// Import WebSocket handlers
+import {
+  handleDialogueConnection,
+  initSessionCleanup,
+} from './websocket/dialogue.websocket.js';
 
 const app = express();
 const PORT = config.port || 3000;
@@ -99,11 +107,27 @@ app.use('*', (req, res) => {
   });
 });
 
+// Create HTTP server
+const server = createServer(app);
+
+// Create WebSocket server for Dialogue Mode
+const wss = new WebSocketServer({
+  server,
+  path: '/ws/dialogue',
+});
+
+// Handle WebSocket connections
+wss.on('connection', handleDialogueConnection);
+
+// Initialize session cleanup
+initSessionCleanup();
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`Health check available at: http://localhost:${PORT}/health`);
+  logger.info(`WebSocket server available at: ws://localhost:${PORT}/ws/dialogue`);
 });
 
 // Handle unhandled promise rejections

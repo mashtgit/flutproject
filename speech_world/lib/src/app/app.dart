@@ -17,7 +17,7 @@ import 'package:speech_world/src/presentation/controllers/home_controller.dart';
 import 'package:speech_world/src/presentation/controllers/profile_controller.dart';
 import 'package:speech_world/src/presentation/controllers/subscription_controller.dart';
 import 'package:speech_world/src/presentation/controllers/user_cubit.dart';
-import 'package:speech_world/src/presentation/screens/home/home_screen.dart';
+import 'package:speech_world/src/presentation/screens/dialogue_screen.dart';
 import 'package:speech_world/src/presentation/screens/profile/profile_screen.dart';
 import 'package:speech_world/src/presentation/screens/subscription/subscription_screen.dart';
 import 'package:speech_world/src/presentation/screens/welcome/welcome_screen.dart';
@@ -106,7 +106,7 @@ class _AppState extends State<App> {
       BlocProvider.value(value: _authCubit, child: const WelcomeScreen()),
       BlocProvider.value(
         value: _userCubit,
-        child: HomeScreen(controller: _homeController),
+        child: const DialogueScreen(),
       ),
       BlocProvider.value(
         value: _userCubit,

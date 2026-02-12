@@ -75,6 +75,11 @@ speech_world_backend/dist/
 speech_world_backend/.env
 speech_world_backend/.env.local
 speech_world_backend/.env.*.local
+
+# Service Account Keys (Local Development Only - Never commit to git!)
+speech_world_backend/vertex.json
+speech_world_backend/*-sa-*.json
+speech_world_backend/*service-account*.json
 speech_world_backend/npm-debug.log*
 speech_world_backend/yarn-debug.log*
 speech_world_backend/yarn-error.log*

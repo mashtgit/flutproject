@@ -35,6 +35,13 @@ class ApiConfig {
     return isProduction ? prodBaseUrl : devBaseUrl;
   }
   
+  /// WebSocket base URL
+  static String get wsBaseUrl {
+    final httpUrl = baseUrl;
+    // Replace http with ws for WebSocket connection
+    return httpUrl.replaceFirst('http', 'ws');
+  }
+  
   /// API endpoints prefix
   static const String apiPrefix = '/api';
   
