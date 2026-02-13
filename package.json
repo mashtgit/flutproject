@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@google-cloud/aiplatform": "^6.4.0",
+    "@types/ws": "^8.18.1",
+    "google-auth-library": "^10.5.0",
+    "ws": "^8.19.0"
+  }
+}

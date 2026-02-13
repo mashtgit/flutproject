@@ -130,14 +130,17 @@ class DialogueAudioController extends ChangeNotifier {
     }
 
     _setState(AudioControllerState.connecting);
+    debugPrint('[DialogueAudioController] Connecting to WebSocket...');
 
     try {
       final connected = await _webSocket.connect();
       if (!connected) {
         throw Exception(_webSocket.errorMessage ?? 'Failed to connect');
       }
+      debugPrint('[DialogueAudioController] WebSocket connected successfully');
       return true;
     } catch (e) {
+      debugPrint('[DialogueAudioController] Failed to connect: $e');
       _setError('Failed to connect: $e');
       return false;
     }

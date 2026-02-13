@@ -29,7 +29,8 @@ import {
 } from './websocket/dialogue.websocket.js';
 
 const app = express();
-const PORT = config.port || 3000;
+// Cloud Run requires port 8080, use env.PORT first, then config, then fallback
+const PORT = process.env.PORT || config.port || 3000;
 
 // Security middleware
 app.use(helmet());
@@ -81,6 +82,23 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Compression middleware
 app.use(compression());
+
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Speech World API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth',
+      users: '/api/users',
+      websocket: '/ws/dialogue',
+    },
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+  });
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -13,7 +13,7 @@ class ApiUserRepositoryImpl implements UserRepository {
   Future<UserEntity?> getUser(String uid) async {
     try {
       final response = await ApiClient.get(
-        ApiConfig.userProfile(uid),
+        ApiConfig.userProfile,
       );
       
       if (response.statusCode == 200 && response.data != null) {
@@ -39,7 +39,7 @@ class ApiUserRepositoryImpl implements UserRepository {
       debugPrint('[ApiUserRepository] Creating user via API: ${user.id}');
       
       final response = await ApiClient.post(
-        ApiConfig.userProfile(user.id),
+        ApiConfig.userProfile,
         data: {
           'email': user.email,
           'displayName': user.email.split('@')[0], // Default name from email
@@ -67,7 +67,7 @@ class ApiUserRepositoryImpl implements UserRepository {
       debugPrint('[ApiUserRepository] Updating user via API: ${user.id}');
       
       final response = await ApiClient.put(
-        ApiConfig.userProfile(user.id),
+        ApiConfig.userProfile,
         data: {
           'displayName': user.email.split('@')[0],
           'photoURL': null,

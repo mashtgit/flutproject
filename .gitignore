@@ -7,8 +7,10 @@
 .firebase/
 .roo/
 .vscode/
+.roo
 mcp-servers/
 venv/
+.logs
 
 # ============================================
 # FLUTTER / DART

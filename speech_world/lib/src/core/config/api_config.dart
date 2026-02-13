@@ -20,9 +20,8 @@ class ApiConfig {
   
   /// Production environment (deployed backend)
   /// 
-  /// Replace with actual Cloud Run URL after deployment
-  /// Example: https://speech-world-backend-xxx-uc.a.run.app
-  static const String prodBaseUrl = 'https://your-api-domain.com';
+  /// Cloud Run URL: https://console.cloud.google.com/run/detail/europe-west3/speech-world-backend
+  static const String prodBaseUrl = 'https://speech-world-backend-137235369956.europe-west3.run.app';
   
   /// Current environment
   static bool get isProduction {
@@ -57,8 +56,9 @@ class ApiConfig {
   static const String authCustomToken = '/auth/custom-token';
   
   /// User endpoints
-  static String userProfile(String uid) => '/users/$uid/profile';
-  static String userStats(String uid) => '/users/$uid/stats';
+  // Backend extracts uid from JWT token, no need to pass it in URL
+  static const String userProfile = '/users/profile';
+  static const String userStats = '/users/stats';
   static const String usersList = '/users';
   
   /// Health check

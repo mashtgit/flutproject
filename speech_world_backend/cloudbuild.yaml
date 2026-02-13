@@ -1,0 +1,46 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--no-cache'
+      - '-t'
+      - 'europe-west3-docker.pkg.dev/speech-world-003/cloud-run-source-deploy/speech-world-backend:v5'
+      - '-t'
+      - 'europe-west3-docker.pkg.dev/speech-world-003/cloud-run-source-deploy/speech-world-backend:latest'
+      - '.'
+
+  # Push the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'europe-west3-docker.pkg.dev/speech-world-003/cloud-run-source-deploy/speech-world-backend:v5'
+
+  # Deploy to Cloud Run with environment variables from env.yaml
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'speech-world-backend'
+      - '--image'
+      - 'europe-west3-docker.pkg.dev/speech-world-003/cloud-run-source-deploy/speech-world-backend:v5'
+      - '--region'
+      - 'europe-west3'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--max-instances'
+      - '10'
+      - '--timeout'
+      - '300'
+      - '--env-vars-file'
+      - 'env.yaml'
+
+images:
+  - 'europe-west3-docker.pkg.dev/speech-world-003/cloud-run-source-deploy/speech-world-backend:v5'
+  - 'europe-west3-docker.pkg.dev/speech-world-003/cloud-run-source-deploy/speech-world-backend:latest'

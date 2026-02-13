@@ -1,5 +1,5 @@
 /**
- * Vertex AI Service
+ * Vertex AI Service - REAL IMPLEMENTATION
  * 
  * Manages Gemini Live API sessions for Dialogue Mode.
  * Handles WebSocket connections to Vertex AI and audio streaming.
@@ -7,14 +7,19 @@
  * @module services/vertexai
  */
 
-import * as aiplatform from '@google-cloud/aiplatform';
 import WebSocket from 'ws';
 import { logger } from '../utils/logger.js';
+import { GoogleAuth } from 'google-auth-library';
 
 // Configuration constants
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'speech-world-003';
 const LOCATION = 'europe-west4';
-const MODEL = 'gemini-2.5-flash-native-audio';
+const MODEL = 'gemini-2.5-flash-native-audio-preview';
+
+// Vertex AI WebSocket endpoint
+function getVertexWebSocketUrl(accessToken: string): string {
+  return `wss://${LOCATION}-aiplatform.googleapis.com/ws/google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent`;
+}
 
 /**
  * Supported languages for Dialogue Mode
@@ -47,6 +52,8 @@ interface SessionState {
   isActive: boolean;
   createdAt: Date;
   lastActivity: Date;
+  audioBuffer: Buffer[];
+  accessToken?: string;
 }
 
 /**
@@ -55,32 +62,79 @@ interface SessionState {
 const sessions = new Map<string, SessionState>();
 
 /**
+ * Google Auth client
+ */
+let authClient: GoogleAuth | null = null;
+
+/**
+ * Initialize Google Auth
+ */
+function getAuthClient(): GoogleAuth {
+  if (!authClient) {
+    authClient = new GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    });
+  }
+  return authClient;
+}
+
+/**
  * Generate system prompt for Dialogue Mode
  */
 function generateDialoguePrompt(l1: string, l2: string): string {
   const l1Name = SUPPORTED_LANGUAGES.find(l => l.code === l1)?.name || l1;
   const l2Name = SUPPORTED_LANGUAGES.find(l => l.code === l2)?.name || l2;
 
-  return `Ты — профессиональный синхронный переводчик для диалогов между людьми.
+  return `You are a professional real-time interpreter for conversations between people speaking ${l1Name} and ${l2Name}.
 
-ТВОЯ ЗАДАЧА:
-- Слушай аудио и определяй язык речи (${l1Name} или ${l2Name})
-- Переводи речь на другой язык в реальном времени
-- Озвучивай перевод естественным разговорным голосом
+YOUR TASK:
+- Listen to audio and identify the language (${l1Name} or ${l2Name})
+- Translate speech to the other language in real-time
+- Speak the translation in a natural, conversational voice
 
-ПРАВИЛА:
-1. Если слышишь ${l1Name} (L1) → переводи на ${l2Name} (L2)
-2. Если слышишь ${l2Name} (L2) → переводи на ${l1Name} (L1)
-3. НЕ добавляй никаких объяснений от себя
-4. НЕ повторяй то, что сказано, только перевод
-5. Используй естественный, разговорный стиль
-6. Сохраняй эмоциональный тон оратора
+RULES:
+1. If you hear ${l1Name} (L1) → translate to ${l2Name} (L2)
+2. If you hear ${l2Name} (L2) → translate to ${l1Name} (L1)
+3. DO NOT add any explanations or commentary
+4. DO NOT repeat what was said, only the translation
+5. Use natural, conversational style
+6. Maintain the emotional tone of the speaker
 
-ЯЗЫКИ:
+LANGUAGES:
 - L1: ${l1Name} (${l1})
 - L2: ${l2Name} (${l2})
 
-Отвечай ТОЛЬКО переводом, без меток языков и комментариев.`;
+Respond ONLY with the translation, no language labels or comments.`;
+}
+
+/**
+ * Create Gemini Live setup message
+ */
+function createSetupMessage(l1: string, l2: string): object {
+  const systemPrompt = generateDialoguePrompt(l1, l2);
+  
+  return {
+    setup: {
+      model: `projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL}`,
+      generation_config: {
+        response_modalities: ['AUDIO'],
+        speech_config: {
+          voice_config: {
+            prebuilt_voice_config: {
+              voice_name: 'Puck', // Natural conversational voice
+            },
+          },
+        },
+      },
+      system_instruction: {
+        parts: [
+          {
+            text: systemPrompt,
+          },
+        ],
+      },
+    },
+  };
 }
 
 /**
@@ -104,6 +158,7 @@ export async function createLiveSession(
       isActive: true,
       createdAt: new Date(),
       lastActivity: new Date(),
+      audioBuffer: [],
     };
 
     sessions.set(sessionId, session);
@@ -117,19 +172,37 @@ export async function createLiveSession(
 }
 
 /**
+ * Get access token for Vertex AI
+ */
+async function getAccessToken(): Promise<string> {
+  try {
+    const auth = getAuthClient();
+    const client = await auth.getClient();
+    const token = await client.getAccessToken();
+    
+    if (!token.token) {
+      throw new Error('Failed to obtain access token');
+    }
+    
+    logger.info('Successfully obtained access token for Vertex AI');
+    return token.token;
+  } catch (error) {
+    logger.error('Failed to get access token:', error);
+    throw new Error('Authentication failed for Vertex AI');
+  }
+}
+
+/**
  * Connect to Gemini Live WebSocket
  * 
- * NOTE: This is a placeholder implementation. The actual Vertex AI Live API
- * connection requires proper authentication and specific WebSocket protocol.
- * 
- * TODO: Implement actual Vertex AI Live API connection
+ * REAL IMPLEMENTATION: Connects to actual Vertex AI Gemini Live API
  */
 export async function connectVertexWebSocket(
   sessionId: string,
   l1Language: string,
   l2Language: string
 ): Promise<WebSocket> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
       const session = sessions.get(sessionId);
       if (!session) {
@@ -137,41 +210,115 @@ export async function connectVertexWebSocket(
       }
 
       logger.info(`Connecting to Vertex AI Live API for session: ${sessionId}`);
-      
-      // Placeholder: In production, this would connect to the actual Vertex AI endpoint
-      // with proper authentication using the service account credentials
-      // 
-      // The WebSocket URL format is:
-      // wss://europe-west4-aiplatform.googleapis.com/ws/google.cloud.aiplatform.v1beta1.LlmBidiService/BidiGenerateContent
-      //
-      // Authentication requires an access token from GOOGLE_APPLICATION_CREDENTIALS
-      
-      // For now, return a mock WebSocket that logs operations
-      const mockWs = {
-        readyState: WebSocket.OPEN,
-        send: (data: string | Buffer) => {
-          logger.debug(`Mock Vertex WebSocket send for session ${sessionId}`);
-        },
-        close: () => {
-          logger.info(`Mock Vertex WebSocket closed for session: ${sessionId}`);
-        },
-        on: (event: string, callback: Function) => {
-          // Mock event handler
-        },
-      } as unknown as WebSocket;
+      logger.info(`Languages: ${l1Language} ↔ ${l2Language}`);
 
-      // Simulate successful connection
-      setTimeout(() => {
-        logger.info(`Vertex WebSocket connected (mock) for session: ${sessionId}`);
-        resolve(mockWs);
-      }, 100);
+      // Get access token
+      const accessToken = await getAccessToken();
+      session.accessToken = accessToken;
 
-      session.vertexSocket = mockWs;
+      // Create WebSocket connection to Vertex AI
+      const wsUrl = getVertexWebSocketUrl(accessToken);
+      const vertexSocket = new WebSocket(wsUrl, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      // Handle connection open
+      vertexSocket.on('open', () => {
+        logger.info(`✅ Vertex AI WebSocket connected for session: ${sessionId}`);
+        
+        // Send setup message
+        const setupMessage = createSetupMessage(l1Language, l2Language);
+        vertexSocket.send(JSON.stringify(setupMessage));
+        logger.info(`Setup message sent for session: ${sessionId}`);
+        
+        resolve(vertexSocket);
+      });
+
+      // Handle errors
+      vertexSocket.on('error', (error) => {
+        logger.error(`❌ Vertex AI WebSocket error for session ${sessionId}:`, error);
+        reject(error);
+      });
+
+      // Handle close
+      vertexSocket.on('close', (code, reason) => {
+        logger.info(`Vertex AI WebSocket closed for session ${sessionId}: code=${code}, reason=${reason}`);
+        
+        // Notify client if still connected
+        if (session.clientSocket?.readyState === WebSocket.OPEN) {
+          session.clientSocket.send(JSON.stringify({
+            type: 'error',
+            sessionId,
+            message: 'Vertex AI connection closed',
+          }));
+        }
+      });
+
+      session.vertexSocket = vertexSocket;
     } catch (error) {
       logger.error('Failed to connect Vertex WebSocket:', error);
       reject(error);
     }
   });
+}
+
+/**
+ * Handle message from Vertex AI
+ */
+export function handleVertexMessage(
+  sessionId: string,
+  message: WebSocket.RawData,
+  onAudioResponse: (audioData: Buffer) => void
+): void {
+  try {
+    const session = sessions.get(sessionId);
+    if (!session) {
+      logger.warn(`Session not found for message: ${sessionId}`);
+      return;
+    }
+
+    // Parse the message
+    const data = JSON.parse(message.toString());
+    
+    // Handle server content
+    if (data.serverContent) {
+      // Handle model turn with audio
+      if (data.serverContent.modelTurn) {
+        const parts = data.serverContent.modelTurn.parts || [];
+        
+        for (const part of parts) {
+          // Handle inline audio data
+          if (part.inlineData) {
+            const audioData = Buffer.from(part.inlineData.data, 'base64');
+            logger.info(`🎵 Received audio from Vertex AI: ${audioData.length} bytes`);
+            onAudioResponse(audioData);
+          }
+          
+          // Handle text response (if any)
+          if (part.text) {
+            logger.info(`📝 Text from Vertex AI: ${part.text.substring(0, 100)}...`);
+          }
+        }
+      }
+      
+      // Handle turn completion
+      if (data.serverContent.turnComplete) {
+        logger.info(`✅ Turn complete for session: ${sessionId}`);
+      }
+    }
+
+    // Handle setup complete
+    if (data.setupComplete) {
+      logger.info(`✅ Setup complete for session: ${sessionId}`);
+    }
+
+    // Update last activity
+    session.lastActivity = new Date();
+  } catch (error) {
+    logger.error(`Failed to handle Vertex message for session ${sessionId}:`, error);
+  }
 }
 
 /**
@@ -189,7 +336,9 @@ export function closeSession(sessionId: string): void {
   if (session) {
     // Close Vertex WebSocket
     if (session.vertexSocket && session.vertexSocket.readyState === WebSocket.OPEN) {
+      // Send end of session message if needed
       session.vertexSocket.close();
+      logger.info(`Vertex WebSocket closed for session: ${sessionId}`);
     }
 
     // Close client WebSocket
@@ -207,8 +356,7 @@ export function closeSession(sessionId: string): void {
 /**
  * Forward audio from client to Vertex AI
  * 
- * NOTE: This is currently a placeholder. Actual implementation would
- * forward PCM audio data to the Vertex AI Live API.
+ * Converts PCM audio to Gemini Live API format and sends it
  */
 export function forwardAudioToVertex(sessionId: string, audioData: Buffer): void {
   const session = sessions.get(sessionId);
@@ -218,8 +366,30 @@ export function forwardAudioToVertex(sessionId: string, audioData: Buffer): void
   }
 
   try {
-    // TODO: Implement actual audio forwarding to Vertex AI
-    // The audio should be sent as base64-encoded PCM data
+    // Create client content message with audio
+    // Gemini Live expects audio in specific format
+    const message = {
+      clientContent: {
+        turns: [
+          {
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  mimeType: 'audio/pcm;rate=16000',
+                  data: audioData.toString('base64'),
+                },
+              },
+            ],
+          },
+        ],
+        turnComplete: false, // Don't complete turn, keep listening
+      },
+    };
+
+    // Send to Vertex AI
+    session.vertexSocket.send(JSON.stringify(message));
+    
     logger.debug(`Audio forwarded to Vertex AI for session ${sessionId} (${audioData.length} bytes)`);
     session.lastActivity = new Date();
   } catch (error) {
@@ -228,27 +398,27 @@ export function forwardAudioToVertex(sessionId: string, audioData: Buffer): void
 }
 
 /**
- * Handle message from Vertex AI
- * 
- * NOTE: This is currently a placeholder. Actual implementation would
- * parse responses from Vertex AI and extract audio data.
+ * Complete the current turn (signal end of user speech)
  */
-export function handleVertexMessage(
-  sessionId: string,
-  message: WebSocket.RawData,
-  onAudioResponse: (audioData: Buffer) => void
-): void {
+export function completeTurn(sessionId: string): void {
+  const session = sessions.get(sessionId);
+  if (!session || !session.vertexSocket || session.vertexSocket.readyState !== WebSocket.OPEN) {
+    return;
+  }
+
   try {
-    // TODO: Implement actual Vertex AI message handling
-    // Parse the response and extract audio data
-    
-    // Update last activity
-    const session = sessions.get(sessionId);
-    if (session) {
-      session.lastActivity = new Date();
-    }
+    // Signal that the user has finished speaking
+    const message = {
+      clientContent: {
+        turns: [],
+        turnComplete: true,
+      },
+    };
+
+    session.vertexSocket.send(JSON.stringify(message));
+    logger.info(`Turn completed for session: ${sessionId}`);
   } catch (error) {
-    logger.error(`Failed to handle Vertex message for session ${sessionId}:`, error);
+    logger.error(`Failed to complete turn for session ${sessionId}:`, error);
   }
 }
 
@@ -285,6 +455,7 @@ export default {
   getSession,
   closeSession,
   forwardAudioToVertex,
+  completeTurn,
   handleVertexMessage,
   getActiveSessions,
   cleanupInactiveSessions,

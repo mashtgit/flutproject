@@ -6,6 +6,7 @@ library;
 
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 /// Playback state enum
@@ -77,11 +78,13 @@ class AudioPlayerService {
     OnPlaybackError? onError,
   }) async {
     try {
+      debugPrint('[AudioPlayer] Playing PCM audio: ${pcmData.length} bytes, $sampleRate Hz');
       _state = PlaybackState.loading;
       onStateChanged?.call(_state);
 
       // Convert PCM to WAV format (just_audio requires a supported format)
       final wavData = _convertPcmToWav(pcmData, sampleRate);
+      debugPrint('[AudioPlayer] Converted to WAV: ${wavData.length} bytes');
       
       // Create audio source from bytes
       final audioSource = AudioSource.uri(
@@ -94,7 +97,9 @@ class AudioPlayerService {
 
       _state = PlaybackState.playing;
       onStateChanged?.call(_state);
+      debugPrint('[AudioPlayer] Playback started');
     } catch (e) {
+      debugPrint('[AudioPlayer] Error: $e');
       _state = PlaybackState.error;
       onStateChanged?.call(_state);
       onError?.call('Failed to play audio: $e');

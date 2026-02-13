@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_world/src/app/app_colors.dart';
-import 'package:speech_world/src/core/services/firebase_service.dart';
 import 'package:speech_world/src/data/repositories/auth_repository_impl.dart';
 import 'package:speech_world/src/data/repositories/user_repository_impl.dart';
 import 'package:speech_world/src/domain/repositories/auth_repository.dart';
@@ -55,8 +54,8 @@ class _AppState extends State<App> {
   @override
   void initState() {
     super.initState();
-    // Инициализация Firebase
-    FirebaseService.initialize();
+    // Firebase уже инициализирован в main.dart
+    // Не вызываем FirebaseService.initialize() здесь
 
     // Инициализация зависимостей (ждём завершения и помечаем флаг)
     _initDependencies().then((_) {

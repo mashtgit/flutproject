@@ -5,6 +5,28 @@ import { UserService } from '../services/user.service.js';
 
 const router = Router();
 
+// Create user profile (requires authentication)
+// Called when user first signs up
+router.post('/profile', createUserOnAuth, asyncHandler(async (req, res, next) => {
+  const userId = req.user.uid;
+  const userEmail = req.user.email;
+  const { displayName, photoURL, credits = 50, subscription = { planId: 'free', status: 'active' } } = req.body;
+
+  const userProfile = await UserService.createUserProfile(userId, {
+    email: userEmail,
+    displayName: displayName || userEmail?.split('@')[0] || 'User',
+    photoURL: photoURL || null,
+    credits,
+    subscription,
+  });
+
+  res.status(201).json({
+    success: true,
+    data: userProfile,
+    message: 'User profile created successfully',
+  });
+}));
+
 // Get user profile (requires authentication)
 router.get('/profile', createUserOnAuth, asyncHandler(async (req, res, next) => {
   const userId = req.user.uid;
@@ -19,6 +41,7 @@ router.get('/profile', createUserOnAuth, asyncHandler(async (req, res, next) => 
 
 // Update user profile (requires authentication)
 router.put('/profile', createUserOnAuth, asyncHandler(async (req, res, next) => {
+
   const userId = req.user.uid;
   const updates = req.body;
   const updatedProfile = await UserService.updateUserProfile(userId, updates);

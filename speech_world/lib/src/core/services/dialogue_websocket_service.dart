@@ -6,7 +6,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -142,7 +142,10 @@ class DialogueWebSocketService {
       final token = await user.getIdToken();
       
       // Build WebSocket URL with auth token
-      final wsUrl = '${ApiConfig.wsBaseUrl}/dialogue?token=$token';
+      // Backend expects: ws://host:port/ws/dialogue
+      final wsUrl = '${ApiConfig.wsBaseUrl}/ws/dialogue?token=$token';
+      
+      debugPrint('[DialogueWebSocket] Connecting to: $wsUrl');
       
       // Connect to WebSocket
       _channel = IOWebSocketChannel.connect(
@@ -160,8 +163,10 @@ class DialogueWebSocketService {
       _setState(WebSocketState.connected);
       _reconnectAttempts = 0;
       
+      debugPrint('[DialogueWebSocket] Connected successfully');
       return true;
     } catch (e) {
+      debugPrint('[DialogueWebSocket] Connection error: $e');
       _handleError(e);
       return false;
     }

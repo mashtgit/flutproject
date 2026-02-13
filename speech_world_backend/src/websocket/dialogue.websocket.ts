@@ -180,8 +180,29 @@ async function handleStartSession(
 
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(response));
+          logger.debug(`Sent audio to client: ${audioData.length} bytes`);
         }
       });
+    });
+
+    // Handle Vertex AI errors
+    vertexSocket.on('error', (error) => {
+      logger.error(`Vertex AI WebSocket error for session ${sessionId}:`, error);
+      sendError(ws, 'Vertex AI connection error');
+    });
+
+    // Handle Vertex AI close
+    vertexSocket.on('close', (code, reason) => {
+      logger.info(`Vertex AI connection closed for session ${sessionId}: code=${code}`);
+      
+      // Notify client
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          sessionId,
+          message: 'Translation service disconnected',
+        }));
+      }
     });
 
     // Send confirmation to client
@@ -192,10 +213,10 @@ async function handleStartSession(
     };
     ws.send(JSON.stringify(response));
 
-    logger.info(`Session ${sessionId} started successfully`);
+    logger.info(`✅ Session ${sessionId} started successfully with Vertex AI`);
   } catch (error) {
-    logger.error(`Failed to start session:`, error);
-    sendError(ws, 'Failed to start session');
+    logger.error(`❌ Failed to start session:`, error);
+    sendError(ws, `Failed to start session: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

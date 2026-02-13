@@ -1,36 +1,25 @@
-# Build stage
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 RUN npm ci
 
-# Copy source code
 COPY . .
-
-# Build TypeScript
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
 RUN npm ci --only=production
 
-# Copy built files from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/index.js ./index.js
 
-# Expose port
-EXPOSE 3000
+EXPOSE 8080
+ENV PORT=8080
+ENV NODE_ENV=production
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
-
-# Start application
-CMD ["node", "dist/app.js"]
+CMD ["npm", "start"]
