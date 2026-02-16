@@ -6,6 +6,7 @@ library;
 
 import 'dart:async';
 import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
 
 /// Audio interruption event
 class AudioInterruptionEvent {
@@ -39,19 +40,30 @@ class AudioSessionService {
   /// - Acoustic Echo Cancellation (AEC)
   /// - Noise Suppression (NS)
   /// - Low latency mode
-  Future<void> initialize() async {
+  Future<bool> initialize() async {
     try {
+      debugPrint('[AudioSessionService] Initializing...');
       _session = await AudioSession.instance;
       
       // Configure for voice chat
       // This enables AEC and NS on supported devices
-      await _session!.configure(AudioSessionConfiguration(
+      final config = AudioSessionConfiguration(
         avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
         avAudioSessionMode: AVAudioSessionMode.voiceChat,
         avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth |
             AVAudioSessionCategoryOptions.allowBluetoothA2dp |
             AVAudioSessionCategoryOptions.defaultToSpeaker,
-      ));
+        // Android specific configuration
+        androidAudioAttributes: const AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.speech,
+          flags: AndroidAudioFlags.none,
+          usage: AndroidAudioUsage.voiceCommunication,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: true,
+      );
+      
+      await _session!.configure(config);
       
       // Listen to interruption events
       _session!.interruptionEventStream.listen((event) {
@@ -62,28 +74,39 @@ class AudioSessionService {
       });
       
       _isConfigured = true;
+      debugPrint('[AudioSessionService] Initialized successfully');
+      return true;
     } catch (e) {
-      throw Exception('Failed to initialize audio session: $e');
+      debugPrint('[AudioSessionService] Failed to initialize: $e');
+      _isConfigured = false;
+      return false;
     }
   }
 
   /// Activate audio session
   /// 
   /// Should be called when starting Dialogue Mode.
-  Future<void> activate() async {
+  Future<bool> activate() async {
     if (!_isConfigured) {
-      await initialize();
+      final success = await initialize();
+      if (!success) return false;
     }
 
     try {
+      debugPrint('[AudioSessionService] Activating...');
       // Request audio focus
       final result = await _session!.setActive(true);
       
       if (!result) {
-        throw Exception('Failed to activate audio session');
+        debugPrint('[AudioSessionService] Failed to activate - no audio focus');
+        return false;
       }
+      
+      debugPrint('[AudioSessionService] Activated successfully');
+      return true;
     } catch (e) {
-      throw Exception('Failed to activate audio session: $e');
+      debugPrint('[AudioSessionService] Failed to activate: $e');
+      return false;
     }
   }
 
@@ -94,41 +117,55 @@ class AudioSessionService {
     if (_session == null) return;
 
     try {
+      debugPrint('[AudioSessionService] Deactivating...');
       await _session!.setActive(false);
+      debugPrint('[AudioSessionService] Deactivated');
     } catch (e) {
-      throw Exception('Failed to deactivate audio session: $e');
+      debugPrint('[AudioSessionService] Failed to deactivate: $e');
     }
   }
 
   /// Configure for playback only
   /// 
   /// Use this when only listening (not recording).
-  Future<void> configureForPlayback() async {
+  Future<bool> configureForPlayback() async {
     try {
       _session ??= await AudioSession.instance;
       
       await _session!.configure(const AudioSessionConfiguration(
         avAudioSessionCategory: AVAudioSessionCategory.playback,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.speech,
+          usage: AndroidAudioUsage.media,
+        ),
       ));
       _isConfigured = true;
+      return true;
     } catch (e) {
-      throw Exception('Failed to configure for playback: $e');
+      debugPrint('[AudioSessionService] Failed to configure for playback: $e');
+      return false;
     }
   }
 
   /// Configure for recording only
   /// 
   /// Use this when only recording (not playing).
-  Future<void> configureForRecording() async {
+  Future<bool> configureForRecording() async {
     try {
       _session ??= await AudioSession.instance;
       
       await _session!.configure(const AudioSessionConfiguration(
         avAudioSessionCategory: AVAudioSessionCategory.record,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.speech,
+          usage: AndroidAudioUsage.voiceCommunication,
+        ),
       ));
       _isConfigured = true;
+      return true;
     } catch (e) {
-      throw Exception('Failed to configure for recording: $e');
+      debugPrint('[AudioSessionService] Failed to configure for recording: $e');
+      return false;
     }
   }
 
@@ -136,31 +173,46 @@ class AudioSessionService {
   /// 
   /// This is the main configuration for Dialogue Mode.
   /// Enables both recording and playback with AEC.
-  Future<void> configureForDialogue() async {
+  Future<bool> configureForDialogue() async {
     try {
+      debugPrint('[AudioSessionService] Configuring for dialogue mode...');
       _session ??= await AudioSession.instance;
       
       // Voice chat mode provides AEC and NS
-      await _session!.configure(AudioSessionConfiguration(
+      final config = AudioSessionConfiguration(
         avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
         avAudioSessionMode: AVAudioSessionMode.voiceChat,
         avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.allowBluetooth |
             AVAudioSessionCategoryOptions.allowBluetoothA2dp |
             AVAudioSessionCategoryOptions.defaultToSpeaker,
-      ));
+        // Android specific configuration for voice communication
+        androidAudioAttributes: const AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.speech,
+          flags: AndroidAudioFlags.none,
+          usage: AndroidAudioUsage.voiceCommunication,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: true,
+      );
       
+      await _session!.configure(config);
       _isConfigured = true;
+      debugPrint('[AudioSessionService] Configured for dialogue mode');
+      return true;
     } catch (e) {
-      throw Exception('Failed to configure for dialogue: $e');
+      debugPrint('[AudioSessionService] Failed to configure for dialogue: $e');
+      return false;
     }
   }
 
   /// Dispose the service
   Future<void> dispose() async {
+    debugPrint('[AudioSessionService] Disposing...');
     await deactivate();
     await _interruptionController.close();
     _isConfigured = false;
     _session = null;
+    debugPrint('[AudioSessionService] Disposed');
   }
 }
 

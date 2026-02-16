@@ -20,8 +20,8 @@ class ApiConfig {
   
   /// Production environment (deployed backend)
   /// 
-  /// Cloud Run URL: https://console.cloud.google.com/run/detail/europe-west3/speech-world-backend
-  static const String prodBaseUrl = 'https://speech-world-backend-137235369956.europe-west3.run.app';
+  /// Cloud Run URL: https://console.cloud.google.com/run/detail/europe-west1/speech-world-backend
+  static const String prodBaseUrl = 'https://speech-world-backend-137235369956.europe-west1.run.app';
   
   /// Current environment
   static bool get isProduction {

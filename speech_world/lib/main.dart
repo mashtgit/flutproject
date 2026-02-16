@@ -3,6 +3,7 @@ import 'src/core/services/firebase_service.dart';
 import 'src/core/services/analytics_service.dart';
 import 'src/core/services/crashlytics_service.dart';
 import 'src/app/app.dart';
+import 'src/presentation/screens/echo_test_screen.dart';
 
 /// Главная точка входа в приложение Speech World
 /// 
@@ -104,6 +105,9 @@ class SpeechWorldApp extends StatelessWidget {
         ),
       ),
       home: const App(),
+      routes: {
+        '/echo-test': (context) => const EchoTestScreen(),
+      },
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(

@@ -69,8 +69,7 @@ class _AppState extends State<App> {
     _authRepository = AuthRepositoryImpl(
       firebaseAuth: FirebaseAuth.instance,
       googleSignIn: GoogleSignIn(
-        scopes: ['email'],
-        serverClientId:
+        clientId:
             '137235369956-ehr5ldr7vcf41f5vvgpgfl6bhdb6gpl1.apps.googleusercontent.com',
       ),
     );
@@ -89,7 +88,7 @@ class _AppState extends State<App> {
       firebaseAuth: FirebaseAuth.instance,
       googleSignIn: GoogleSignIn(
         scopes: ['email'],
-        serverClientId:
+        clientId:
             '137235369956-ehr5ldr7vcf41f5vvgpgfl6bhdb6gpl1.apps.googleusercontent.com',
       ),
       preferences: preferences,
@@ -103,14 +102,8 @@ class _AppState extends State<App> {
 
     _screens = [
       BlocProvider.value(value: _authCubit, child: const WelcomeScreen()),
-      BlocProvider.value(
-        value: _userCubit,
-        child: const DialogueScreen(),
-      ),
-      BlocProvider.value(
-        value: _userCubit,
-        child: const ProfileScreen(),
-      ),
+      BlocProvider.value(value: _userCubit, child: const DialogueScreen()),
+      BlocProvider.value(value: _userCubit, child: const ProfileScreen()),
       const SubscriptionScreen(),
     ];
 
@@ -151,7 +144,7 @@ class _AppState extends State<App> {
             );
             // Load user data into UserCubit
             _userCubit.loadUser(state.user.id);
-            
+
             // Остаемся на Welcome или переходим на Home по выбору
             if (_currentIndex == 0) {
               setState(() {

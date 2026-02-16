@@ -13,8 +13,8 @@ import { GoogleAuth } from 'google-auth-library';
 
 // Configuration constants
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'speech-world-003';
-const LOCATION = 'europe-west4';
-const MODEL = 'gemini-2.5-flash-native-audio-preview';
+const LOCATION = 'europe-west1';
+const MODEL = 'gemini-live-2.5-flash-native-audio';
 
 // Vertex AI WebSocket endpoint
 function getVertexWebSocketUrl(accessToken: string): string {
@@ -356,18 +356,52 @@ export function closeSession(sessionId: string): void {
 /**
  * Forward audio from client to Vertex AI
  * 
- * Converts PCM audio to Gemini Live API format and sends it
+ * Converts PCM audio to Gemini Live API format and sends it.
+ * If session is not active, buffers audio for later sending.
  */
 export function forwardAudioToVertex(sessionId: string, audioData: Buffer): void {
   const session = sessions.get(sessionId);
-  if (!session || !session.vertexSocket || session.vertexSocket.readyState !== WebSocket.OPEN) {
-    logger.warn(`Cannot forward audio: session ${sessionId} not active`);
+  if (!session) {
+    logger.warn(`Cannot forward audio: session ${sessionId} not found`);
+    return;
+  }
+
+  // If Vertex AI socket is not open yet, buffer audio
+  if (!session.vertexSocket || session.vertexSocket.readyState !== WebSocket.OPEN) {
+    logger.debug(`Buffering audio: session ${sessionId} not ready (${audioData.length} bytes)`);
+    session.audioBuffer.push(audioData);
     return;
   }
 
   try {
-    // Create client content message with audio
-    // Gemini Live expects audio in specific format
+    // Send buffered audio first
+    if (session.audioBuffer.length > 0) {
+      logger.debug(`Sending buffered audio: ${session.audioBuffer.length} chunks`);
+      for (const bufferedData of session.audioBuffer) {
+        const bufferMessage = {
+          clientContent: {
+            turns: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: 'audio/pcm;rate=16000',
+                      data: bufferedData.toString('base64'),
+                    },
+                  },
+                ],
+              },
+            ],
+            turnComplete: false,
+          },
+        };
+        session.vertexSocket.send(JSON.stringify(bufferMessage));
+      }
+      session.audioBuffer = [];
+    }
+
+    // Send current audio
     const message = {
       clientContent: {
         turns: [
@@ -387,7 +421,6 @@ export function forwardAudioToVertex(sessionId: string, audioData: Buffer): void
       },
     };
 
-    // Send to Vertex AI
     session.vertexSocket.send(JSON.stringify(message));
     
     logger.debug(`Audio forwarded to Vertex AI for session ${sessionId} (${audioData.length} bytes)`);
@@ -402,7 +435,18 @@ export function forwardAudioToVertex(sessionId: string, audioData: Buffer): void
  */
 export function completeTurn(sessionId: string): void {
   const session = sessions.get(sessionId);
-  if (!session || !session.vertexSocket || session.vertexSocket.readyState !== WebSocket.OPEN) {
+  if (!session) {
+    logger.warn(`Cannot complete turn: session ${sessionId} not found`);
+    return;
+  }
+  
+  if (!session.vertexSocket) {
+    logger.warn(`Cannot complete turn: no Vertex AI socket for session ${sessionId}`);
+    return;
+  }
+  
+  if (session.vertexSocket.readyState !== WebSocket.OPEN) {
+    logger.warn(`Cannot complete turn: Vertex AI socket not open for session ${sessionId}, state: ${session.vertexSocket.readyState}`);
     return;
   }
 
@@ -416,7 +460,7 @@ export function completeTurn(sessionId: string): void {
     };
 
     session.vertexSocket.send(JSON.stringify(message));
-    logger.info(`Turn completed for session: ${sessionId}`);
+    logger.info(`✅ Turn complete signal sent to Vertex AI for session: ${sessionId}`);
   } catch (error) {
     logger.error(`Failed to complete turn for session ${sessionId}:`, error);
   }

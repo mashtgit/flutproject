@@ -3,6 +3,7 @@
  * 
  * Manages WebSocket connections from Flutter clients for Dialogue Mode.
  * Proxies audio/text between client and Vertex AI Gemini Live API.
+ * Includes VAD integration and turn completion signaling.
  * 
  * @module websocket/dialogue
  */
@@ -18,6 +19,7 @@ import {
   handleVertexMessage,
   getSession,
   cleanupInactiveSessions,
+  completeTurn,
   SUPPORTED_LANGUAGES,
 } from '../services/vertexai.service.js';
 
@@ -28,7 +30,7 @@ const CLEANUP_INTERVAL = 5 * 60 * 1000;
  * Client message types
  */
 interface ClientMessage {
-  type: 'start' | 'audio' | 'text' | 'stop';
+  type: 'start' | 'audio' | 'text' | 'stop' | 'turn_complete';
   sessionId?: string;
   l1Language?: string;
   l2Language?: string;
@@ -39,11 +41,12 @@ interface ClientMessage {
  * Server message types
  */
 interface ServerMessage {
-  type: 'connected' | 'started' | 'audio' | 'text' | 'error' | 'stopped';
+  type: 'connected' | 'started' | 'audio' | 'text' | 'error' | 'stopped' | 'vad_state';
   sessionId?: string;
   data?: string; // base64 encoded audio or text
   message?: string;
   supportedLanguages?: typeof SUPPORTED_LANGUAGES;
+  vadState?: 'idle' | 'speech_detected' | 'speech_ending';
 }
 
 /**
@@ -105,8 +108,11 @@ async function handleClientMessage(
   clientId: string
 ): Promise<void> {
   try {
-    const message: ClientMessage = JSON.parse(data.toString());
-    logger.debug(`Received ${message.type} from ${clientId}`);
+    const rawMessage = data.toString();
+    logger.info(`📨 RAW MESSAGE from ${clientId}: ${rawMessage.substring(0, 200)}...`);
+    
+    const message: ClientMessage = JSON.parse(rawMessage);
+    logger.info(`📨 Received ${message.type} from ${clientId}, session: ${message.sessionId || 'N/A'}`);
 
     switch (message.type) {
       case 'start':
@@ -119,6 +125,10 @@ async function handleClientMessage(
 
       case 'text':
         handleTextData(message);
+        break;
+
+      case 'turn_complete':
+        handleTurnComplete(message);
         break;
 
       case 'stop':
@@ -180,14 +190,14 @@ async function handleStartSession(
 
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(response));
-          logger.debug(`Sent audio to client: ${audioData.length} bytes`);
+          logger.info(`🎵 Sent audio to client: ${audioData.length} bytes`);
         }
       });
     });
 
     // Handle Vertex AI errors
     vertexSocket.on('error', (error) => {
-      logger.error(`Vertex AI WebSocket error for session ${sessionId}:`, error);
+      logger.error(`❌ Vertex AI WebSocket error for session ${sessionId}:`, error);
       sendError(ws, 'Vertex AI connection error');
     });
 
@@ -239,10 +249,37 @@ function handleAudioData(message: ClientMessage): void {
 
   try {
     const audioBuffer = Buffer.from(data, 'base64');
+    logger.info(`📥 AUDIO from client: ${audioBuffer.length} bytes for session ${sessionId}`);
     forwardAudioToVertex(sessionId, audioBuffer);
   } catch (error) {
     logger.error(`Failed to process audio for session ${sessionId}:`, error);
   }
+}
+
+/**
+ * Handle turn complete from client (VAD gate closed)
+ * 
+ * This is sent when VAD detects end of speech and closes the gate.
+ * It signals to Vertex AI that the user has finished speaking.
+ */
+function handleTurnComplete(message: ClientMessage): void {
+  const { sessionId } = message;
+
+  if (!sessionId) {
+    logger.warn('Missing sessionId in turn_complete message');
+    return;
+  }
+
+  const session = getSession(sessionId);
+  if (!session) {
+    logger.warn(`Session not found for turn_complete: ${sessionId}`);
+    return;
+  }
+
+  logger.info(`🎯 Turn complete received from client for session ${sessionId}`);
+  
+  // Signal to Vertex AI that the turn is complete
+  completeTurn(sessionId);
 }
 
 /**

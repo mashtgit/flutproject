@@ -51,8 +51,8 @@ class AuthCubit extends Cubit<AuthState> {
 
       // Создаем учетные данные Firebase
       final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
       );
 
       // Аутентифицируемся в Firebase
@@ -65,13 +65,19 @@ class AuthCubit extends Cubit<AuthState> {
       if (user != null) {
         // Use Google email if Firebase email is empty (can happen on first sign-in)
         final String userEmail = user.email ?? googleUser.email;
-        final String userName = user.displayName ?? googleUser.displayName ?? 'User';
+        final String userName =
+            user.displayName ?? googleUser.displayName ?? 'User';
         final String? userPhoto = user.photoURL ?? googleUser.photoUrl;
-        
+
         debugPrint('User email: $userEmail, name: $userName');
-        
+
         // Сохраняем информацию о пользователе
-        await _saveUserToPreferences(user, email: userEmail, name: userName, photoUrl: userPhoto);
+        await _saveUserToPreferences(
+          user,
+          email: userEmail,
+          name: userName,
+          photoUrl: userPhoto,
+        );
 
         // Создаем или обновляем профиль пользователя в Firestore
         // Работает как для новых, так и для существующих пользователей
@@ -164,7 +170,9 @@ class AuthCubit extends Cubit<AuthState> {
       if (currentUser != null) {
         // Пользователь уже аутентифицирован
         debugPrint('Current user found: ${currentUser.uid}');
-        final AuthUserEntity authUser = await _authRepository.getUser(currentUser.uid);
+        final AuthUserEntity authUser = await _authRepository.getUser(
+          currentUser.uid,
+        );
         debugPrint('User profile loaded: ${authUser.id}');
         emit(Authenticated(user: authUser));
       } else {
@@ -173,7 +181,9 @@ class AuthCubit extends Cubit<AuthState> {
 
         if (savedUserId != null) {
           debugPrint('Attempting to load saved user: $savedUserId');
-          final AuthUserEntity authUser = await _authRepository.getUser(savedUserId);
+          final AuthUserEntity authUser = await _authRepository.getUser(
+            savedUserId,
+          );
           debugPrint('Saved user profile loaded: ${authUser.id}');
           emit(Authenticated(user: authUser));
         } else {
@@ -188,7 +198,12 @@ class AuthCubit extends Cubit<AuthState> {
   }
 
   /// Сохранение пользователя в SharedPreferences
-  Future<void> _saveUserToPreferences(User user, {String? email, String? name, String? photoUrl}) async {
+  Future<void> _saveUserToPreferences(
+    User user, {
+    String? email,
+    String? name,
+    String? photoUrl,
+  }) async {
     await _preferences.setString('user_id', user.uid);
     await _preferences.setString('user_email', email ?? user.email ?? '');
     await _preferences.setString('user_name', name ?? user.displayName ?? '');

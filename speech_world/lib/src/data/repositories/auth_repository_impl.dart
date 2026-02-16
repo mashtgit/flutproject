@@ -11,14 +11,14 @@ class AuthRepositoryImpl implements AuthRepository {
   final GoogleSignIn _googleSignIn;
 
   AuthRepositoryImpl({FirebaseAuth? firebaseAuth, GoogleSignIn? googleSignIn})
-      : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn =
-            googleSignIn ??
-            GoogleSignIn(
-              clientId: kIsWeb
-                  ? '137235369956-ehr5ldr7vcf41f5vvgpgfl6bhdb6gpl1.apps.googleusercontent.com'
-                  : null,
-            );
+    : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+      _googleSignIn =
+          googleSignIn ??
+          GoogleSignIn(
+            clientId: kIsWeb
+                ? '137235369956-ehr5ldr7vcf41f5vvgpgfl6bhdb6gpl1.apps.googleusercontent.com'
+                : null,
+          );
 
   @override
   Future<User?> getCurrentUser() async {
@@ -37,8 +37,8 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
       );
 
       // Входим в Firebase с учетными данными Google
@@ -122,7 +122,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       debugPrint('Creating user profile for: $userId ($email)');
       final userRepo = UserRepositoryImpl();
-      
+
       // New users get 'free' subscription + 50 starter credits
       final userEntity = UserEntity(
         id: userId,
@@ -140,11 +140,15 @@ class AuthRepositoryImpl implements AuthRepository {
       // Verify the document was written to Firestore
       final created = await userRepo.getUserById(userId);
       if (created != null) {
-        debugPrint('✅ Verified user profile in Firestore for ID: $userId with ${created.credits} credits');
+        debugPrint(
+          '✅ Verified user profile in Firestore for ID: $userId with ${created.credits} credits',
+        );
       } else {
         debugPrint('⚠️  User profile not found after creation for ID: $userId');
       }
-      debugPrint('✅ User profile created successfully: $userId with 50 credits and free subscription');
+      debugPrint(
+        '✅ User profile created successfully: $userId with 50 credits and free subscription',
+      );
     } catch (e) {
       debugPrint('Failed to create user profile: $e');
       throw Exception('Failed to create user profile: $e');
@@ -167,11 +171,14 @@ class AuthRepositoryImpl implements AuthRepository {
       return AuthUserEntity(
         id: userEntity.id,
         email: userEntity.email,
-        name: userEntity.email.split('@')[0], // Используем email как имя по умолчанию
+        name: userEntity.email.split(
+          '@',
+        )[0], // Используем email как имя по умолчанию
         photoUrl: null,
         createdAt: userEntity.createdAt,
         updatedAt: userEntity.createdAt,
-        isActive: true, // Предполагаем, что если пользователь найден, он активен
+        isActive:
+            true, // Предполагаем, что если пользователь найден, он активен
         credits: userEntity.credits,
         subscription: userEntity.subscription,
       );

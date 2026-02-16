@@ -67,6 +67,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   
                   const SizedBox(height: AppTheme.spaceLg),
                   
+                  // Test Mode Card (Echo Mode)
+                  _buildTestModeCard(),
+                  
+                  const SizedBox(height: AppTheme.spaceLg),
+                  
                   // Error message
                   if (_controller.errorMessage != null)
                     _buildErrorCard(),
@@ -528,6 +533,115 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Test Mode Card (Echo Mode for testing)
+  Widget _buildTestModeCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(
+          color: Colors.orange.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: AppTheme.softShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spaceLg),
+        child: Column(
+          children: [
+            // Mode badge
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spaceMd,
+                vertical: AppTheme.spaceXs,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.build,
+                    size: 16,
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'ТЕСТОВЫЙ РЕЖИМ',
+                    style: AppTheme.labelMedium.copyWith(
+                      color: Colors.orange.shade800,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: AppTheme.spaceLg),
+            
+            // Description
+            Text(
+              'Тестирование аудио без сервера. Запись и воспроизведение.',
+              style: AppTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            
+            const SizedBox(height: AppTheme.spaceLg),
+            
+            // Test button
+            Container(
+              width: double.infinity,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.orange, Colors.orange.shade700],
+                ),
+                borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).pushNamed('/echo-test');
+                  },
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.mic,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      SizedBox(width: AppTheme.spaceSm),
+                      Text(
+                        'Тест аудио',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),

@@ -48,7 +48,7 @@ cd speech_world_backend
 # Deploy
 gcloud run deploy speech-world-backend \
   --source . \
-  --region europe-west3 \
+  --region europe-west1 \
   --platform managed \
   --allow-unauthenticated \
   --set-env-vars "NODE_ENV=production" \
@@ -60,15 +60,15 @@ gcloud run deploy speech-world-backend \
 **Option B: Using deployment script**
 
 ```bash
-chmod +x deploy-cloud-run.sh
-./deploy-cloud-run.sh
-```
-
-### 3. Get Backend URL
-
-After deployment, you'll get a URL like:
-```
-https://speech-world-backend-xxxxx.run.app
+gcloud run deploy speech-world-backend \
+  --source . \
+  --region europe-west1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --set-env-vars "NODE_ENV=production" \
+  --memory 512Mi \
+  --cpu 1 \
+  --max-instances 10
 ```
 
 ### 4. Update Flutter Configuration

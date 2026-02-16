@@ -5,7 +5,7 @@
 library;
 
 import 'dart:async';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -50,16 +50,24 @@ class AudioRecorderService {
   /// 
   /// Requests microphone permission and prepares the recorder.
   Future<bool> initialize() async {
+    debugPrint('[AudioRecorderService] Initializing...');
+    
     try {
       // Check microphone permission
+      debugPrint('[AudioRecorderService] Checking microphone permission...');
       final status = await Permission.microphone.request();
+      debugPrint('[AudioRecorderService] Permission status: $status');
+      
       if (status != PermissionStatus.granted) {
+        debugPrint('[AudioRecorderService] Microphone permission denied');
         throw Exception('Microphone permission denied');
       }
 
       _isInitialized = true;
+      debugPrint('[AudioRecorderService] Initialized successfully');
       return true;
     } catch (e) {
+      debugPrint('[AudioRecorderService] Initialization error: $e');
       throw Exception('Failed to initialize audio recorder: $e');
     }
   }
@@ -71,11 +79,15 @@ class AudioRecorderService {
     required OnAudioData onAudioData,
     OnRecordingStateChanged? onStateChanged,
   }) async {
+    debugPrint('[AudioRecorderService] Starting recording...');
+    
     if (!_isInitialized) {
+      debugPrint('[AudioRecorderService] Not initialized, initializing...');
       await initialize();
     }
 
     if (_isRecording) {
+      debugPrint('[AudioRecorderService] Already recording');
       throw Exception('Already recording');
     }
 
@@ -87,17 +99,22 @@ class AudioRecorderService {
         numChannels: AudioConfig.numChannels,
       );
 
+      debugPrint('[AudioRecorderService] Starting stream with config: $config');
+      
       // Start recording with stream
       final stream = await _recorder.startStream(config);
       
       _audioStreamSubscription = stream.listen(
         (data) {
+          debugPrint('[AudioRecorderService] Audio chunk: ${data.length} bytes');
           onAudioData(data);
         },
         onError: (error) {
+          debugPrint('[AudioRecorderService] Stream error: $error');
           throw Exception('Audio stream error: $error');
         },
         onDone: () {
+          debugPrint('[AudioRecorderService] Stream done');
           _isRecording = false;
           onStateChanged?.call(false);
         },
@@ -105,7 +122,9 @@ class AudioRecorderService {
 
       _isRecording = true;
       onStateChanged?.call(true);
+      debugPrint('[AudioRecorderService] Recording started successfully');
     } catch (e) {
+      debugPrint('[AudioRecorderService] Failed to start recording: $e');
       throw Exception('Failed to start recording: $e');
     }
   }

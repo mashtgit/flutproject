@@ -1,13 +1,15 @@
 /// Dialogue Screen
 /// 
 /// Main UI for Dialogue Mode with language selection and audio controls.
-/// Features: WebSocket connection, real-time audio streaming, VU meter visualization.
+/// Features: WebSocket connection, real-time audio streaming, VU meter visualization,
+/// Smart VAD Gating state display, Barge-in indication.
 library;
 
 import 'package:flutter/material.dart';
 import '../widgets/language_selector.dart';
 import '../../core/config/languages.dart';
 import '../../core/services/dialogue_audio_controller.dart';
+import '../../core/services/vad_controller.dart';
 
 /// Dialogue Screen
 class DialogueScreen extends StatefulWidget {
@@ -24,6 +26,7 @@ class _DialogueScreenState extends State<DialogueScreen> {
   String _l2Code = defaultL2Language;
   bool _isInitializing = true;
   String? _errorMessage;
+  bool _showBargeIn = false;
 
   @override
   void initState() {
@@ -54,6 +57,20 @@ class _DialogueScreenState extends State<DialogueScreen> {
 
   void _onControllerUpdate() {
     if (mounted) {
+      // Check for barge-in
+      if (_audioController.vadState == VadState.speechDetected && 
+          _audioController.isPlaying) {
+        _showBargeIn = true;
+        // Hide after 1 second
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            setState(() {
+              _showBargeIn = false;
+            });
+          }
+        });
+      }
+      
       setState(() {});
     }
   }
@@ -116,7 +133,12 @@ class _DialogueScreenState extends State<DialogueScreen> {
 
                 // Status indicator
                 _buildStatusIndicator(theme),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
+                
+                // VAD State indicator
+                if (_audioController.isRecording)
+                  _buildVadIndicator(theme),
+                const SizedBox(height: 16),
                 
                 // Audio visualization
                 _buildAudioVisualization(),
@@ -262,6 +284,72 @@ class _DialogueScreenState extends State<DialogueScreen> {
               color: statusColor,
             ),
           ),
+          // Barge-in indicator
+          if (_showBargeIn) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'BARGE-IN',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVadIndicator(ThemeData theme) {
+    String vadText;
+    Color vadColor;
+    IconData vadIcon;
+    
+    switch (_audioController.vadState) {
+      case VadState.idle:
+        vadText = 'VAD: Waiting for speech...';
+        vadColor = Colors.grey;
+        vadIcon = Icons.mic_off;
+        break;
+      case VadState.speechDetected:
+        vadText = 'VAD: Speech detected ✓';
+        vadColor = Colors.green;
+        vadIcon = Icons.mic;
+        break;
+      case VadState.speechEnding:
+        vadText = 'VAD: Speech ending...';
+        vadColor = Colors.orange;
+        vadIcon = Icons.mic_none;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: vadColor.withAlpha(15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: vadColor.withAlpha(40)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(vadIcon, size: 16, color: vadColor),
+          const SizedBox(width: 6),
+          Text(
+            vadText,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: vadColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -269,20 +357,25 @@ class _DialogueScreenState extends State<DialogueScreen> {
 
   Widget _buildAudioVisualization() {
     if (!_audioController.isRecording) {
-      return const SizedBox(height: 60);
+      return const SizedBox(height: 80);
     }
 
-    // VU Meter visualization
+    // VU Meter visualization with VAD state
     return Container(
-      height: 60,
+      height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: AnimatedBuilder(
         animation: _audioController,
         builder: (context, child) {
           final amplitude = _audioController.currentAmplitude;
+          final isVadGateOpen = _audioController.isVadGateOpen;
+          
           return CustomPaint(
-            size: const Size(double.infinity, 60),
-            painter: _VUMeterPainter(amplitude: amplitude),
+            size: const Size(double.infinity, 80),
+            painter: _VUMeterPainter(
+              amplitude: amplitude,
+              isGateOpen: isVadGateOpen,
+            ),
           );
         },
       ),
@@ -435,11 +528,19 @@ class _DialogueScreenState extends State<DialogueScreen> {
   }
 
   void _startRecording() {
-    if (!_audioController.isConnected) return;
+    if (!_audioController.isConnected) {
+      debugPrint('[DialogueScreen] Cannot start recording - not connected');
+      setState(() {
+        _errorMessage = 'Not connected to server';
+      });
+      return;
+    }
     
     try {
+      debugPrint('[DialogueScreen] Starting recording...');
       _audioController.startRecording();
     } catch (e) {
+      debugPrint('[DialogueScreen] Error starting recording: $e');
       setState(() {
         _errorMessage = 'Error starting recording: $e';
       });
@@ -448,8 +549,10 @@ class _DialogueScreenState extends State<DialogueScreen> {
 
   void _stopRecording() {
     try {
+      debugPrint('[DialogueScreen] Stopping recording...');
       _audioController.stopRecording();
     } catch (e) {
+      debugPrint('[DialogueScreen] Error stopping recording: $e');
       setState(() {
         _errorMessage = 'Error stopping recording: $e';
       });
@@ -490,13 +593,16 @@ class _DialogueScreenState extends State<DialogueScreen> {
 /// VU Meter Painter for audio visualization
 class _VUMeterPainter extends CustomPainter {
   final double amplitude;
+  final bool isGateOpen;
 
-  _VUMeterPainter({required this.amplitude});
+  _VUMeterPainter({
+    required this.amplitude,
+    required this.isGateOpen,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.green
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
 
@@ -511,13 +617,19 @@ class _VUMeterPainter extends CustomPainter {
       final barAmplitude = amplitude * (1 - position * 0.5);
       final barHeight = barAmplitude * size.height * 0.8;
 
-      // Color gradient from green to yellow to red
-      if (amplitude > 0.7) {
-        paint.color = Colors.red;
-      } else if (amplitude > 0.4) {
-        paint.color = Colors.orange;
+      // Color based on VAD state and amplitude
+      if (isGateOpen) {
+        // Gate is open - show active colors
+        if (amplitude > 0.7) {
+          paint.color = Colors.red;
+        } else if (amplitude > 0.4) {
+          paint.color = Colors.orange;
+        } else {
+          paint.color = Colors.green;
+        }
       } else {
-        paint.color = Colors.green;
+        // Gate is closed - show muted colors
+        paint.color = Colors.grey.withAlpha(100);
       }
 
       final x = (size.width - (barCount * (barWidth + spacing))) / 2 + 
@@ -530,10 +642,23 @@ class _VUMeterPainter extends CustomPainter {
         paint,
       );
     }
+
+    // Draw gate indicator
+    final gatePaint = Paint()
+      ..color = isGateOpen ? Colors.green : Colors.grey
+      ..style = PaintingStyle.fill;
+
+    // Gate status circle at the top
+    canvas.drawCircle(
+      Offset(size.width / 2, 10),
+      6,
+      gatePaint,
+    );
   }
 
   @override
   bool shouldRepaint(covariant _VUMeterPainter oldDelegate) {
-    return oldDelegate.amplitude != amplitude;
+    return oldDelegate.amplitude != amplitude || 
+           oldDelegate.isGateOpen != isGateOpen;
   }
 }

@@ -1,2 +1,1 @@
-// Entry point for Cloud Run
-import('./dist/app.js');
+import './dist/app.js'

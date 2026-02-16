@@ -77,7 +77,7 @@ speech_world_backend/*service-account*.json
 gcloud run deploy speech-world-backend \
   --image gcr.io/speech-world-003/backend:latest \
   --service-account=vertex-ai-backend-sa@speech-world-003.iam.gserviceaccount.com \
-  --region=europe-west4
+  --region=europe-west1
 ```
 
 ### Важно
@@ -106,7 +106,7 @@ import { VertexAI } from '@google-cloud/aiplatform';
 // или Workload Identity (Cloud Run)
 const vertexAI = new VertexAI({
   project: 'speech-world-003',
-  location: 'europe-west4',
+  location: 'europe-west1',
 });
 ```
 

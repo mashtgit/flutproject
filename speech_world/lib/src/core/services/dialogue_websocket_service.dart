@@ -199,8 +199,12 @@ class DialogueWebSocketService {
   /// 
   /// [audioData] - Raw PCM audio bytes
   void sendAudio(Uint8List audioData) {
-    if (!isConnected || _sessionId == null) return;
+    if (!isConnected || _sessionId == null) {
+      debugPrint('[DialogueWebSocket] Cannot send audio - not connected or no session');
+      return;
+    }
 
+    debugPrint('[DialogueWebSocket] Sending audio chunk: ${audioData.length} bytes');
     final base64Data = base64Encode(audioData);
     
     final message = {
@@ -220,6 +224,26 @@ class DialogueWebSocketService {
       'type': 'text',
       'sessionId': _sessionId,
       'data': text,
+    };
+
+    _sendMessage(message);
+  }
+
+  /// Send turn complete signal to backend
+  /// 
+  /// This is sent when VAD detects end of speech and closes the gate.
+  /// It signals to Vertex AI that the user has finished speaking.
+  void sendTurnComplete() {
+    if (!isConnected || _sessionId == null) {
+      debugPrint('[DialogueWebSocket] Cannot send turn_complete - not connected or no session');
+      return;
+    }
+
+    debugPrint('[DialogueWebSocket] Sending turn_complete signal');
+    
+    final message = {
+      'type': 'turn_complete',
+      'sessionId': _sessionId,
     };
 
     _sendMessage(message);
@@ -309,12 +333,17 @@ class DialogueWebSocketService {
 
   /// Send message to server
   void _sendMessage(Map<String, dynamic> message) {
-    if (_channel == null) return;
+    if (_channel == null) {
+      debugPrint('[DialogueWebSocket] No channel to send message');
+      return;
+    }
     
     try {
       final json = jsonEncode(message);
       _channel!.sink.add(json);
+      debugPrint('[DialogueWebSocket] Sent message: ${message['type']}');
     } catch (e) {
+      debugPrint('[DialogueWebSocket] Failed to send message: $e');
       onError?.call('Failed to send message: $e');
     }
   }

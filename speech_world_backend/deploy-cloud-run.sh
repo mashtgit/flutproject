@@ -4,7 +4,7 @@
 # Usage: ./deploy-cloud-run.sh [service-name] [region]
 
 SERVICE_NAME=${1:-"speech-world-backend"}
-REGION=${2:-"europe-west3"}
+REGION=${2:-"europe-west1"}
 PROJECT_ID="speech-world-003"
 
 echo "🚀 Deploying to Cloud Run..."
